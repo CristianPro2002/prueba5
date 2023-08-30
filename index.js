@@ -28,7 +28,9 @@ app.use(fileUpload({
 }));
 app.use('/public', express.static(`${__dirname}/uploads/imgs`))
 app.use("/api/v1", router)
-
+app.get("*", (req, res) => {
+  res.sendFile(`${__dirname}/index.html`);
+});
 app.use((req, res, next) => {
   next(createError(404, 'The endpoint does not exist'));
 });

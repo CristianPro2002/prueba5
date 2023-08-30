@@ -206,7 +206,7 @@ const getUser = async (req, res) => {
     .catch((err) => next(createError(500, "Error getting users")));
 };
 
-const getUserById = async (req, res) => {
+const getUserById = async (req, res, next) => {
   await userSchema
     .findById(req.params.id)
     .then((data) => res.json(data))
