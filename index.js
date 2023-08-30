@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require("express");
+const path = require('path');
 const createError = require("http-errors");
 const fileUpload = require('express-fileupload');
 const { Server } = require("socket.io");
@@ -29,7 +30,7 @@ app.use(fileUpload({
 app.use('/public', express.static(`${__dirname}/uploads/imgs`))
 app.use("/api/v1", router)
 app.get("*", (req, res) => {
-  res.sendFile(`${__dirname}/index.html`);
+  res.sendFile(path.resolve(__dirname, "index.html"));
 });
 app.use((req, res, next) => {
   next(createError(404, 'The endpoint does not exist'));
