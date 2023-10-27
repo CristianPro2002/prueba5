@@ -1,22 +1,63 @@
-const express = require('express');
-const { getPlaces, getPlacesByUser, getPlace, postPlace, updateTheme, deletePlace, updatePlace, updateDefaultLang } = require('../../controllers/place.controller.js');
+const express = require("express");
+const { validateToken } = require("../../middleware/authenticationToken.js");
+const { placeController } = require("../../controllers");
 const router = express.Router();
-const upload = require('../../middleware/uploadImg.js')
+const upload = require("../../middleware/uploadImg.js");
 
-router.get('/', getPlaces);
+router.get("/user/:id", validateToken, placeController.getPlacesByUser);
 
-router.get('/user/:id', getPlacesByUser);
+router.get("/:id", placeController.getPlace);
 
-router.get('/:id', getPlace);
+router.get("/about-us/:id", placeController.getPlaceAboutUs);
 
-router.post('/', postPlace);
+router.get("/contact-us/:id", placeController.getPlaceContactUs);
 
-router.put('/theme/:id', updateTheme);
+router.get("/customs/:id", placeController.getPlaceCustoms);
 
-router.delete('/:id', deletePlace);
+router.post("/home", validateToken, placeController.postPlaceStepHome);
 
-router.put('/:id', updatePlace);
+router.put(
+  "/about-us/:id",
+  validateToken,
+  placeController.postPlaceStepAboutUs
+);
 
-router.put('/default-lang/:id', updateDefaultLang);
+router.put(
+  "/contact-us/:id",
+  validateToken,
+  placeController.postPlaceStepContactUs
+);
+
+router.put("/customs/:id", validateToken, placeController.postPlaceStepCustoms);
+
+router.put(
+  "/home/edit/:id",
+  validateToken,
+  placeController.updatePlaceStepHome
+);
+
+router.put(
+  "/about-us/edit/:id",
+  validateToken,
+  placeController.updatePlaceStepAboutUs
+);
+
+router.put(
+  "/contact-us/edit/:id",
+  validateToken,
+  placeController.updatePlaceStepContactUs
+);
+
+router.put(
+  "/customs/edit/:id",
+  validateToken,
+  placeController.updatePlaceStepCustoms
+);
+
+router.put("/theme/:id", validateToken, placeController.updateTheme);
+
+router.delete("/:id", validateToken, placeController.deletePlace);
+
+router.put("/default-lang/:id", placeController.updateDefaultLang);
 
 module.exports = router;

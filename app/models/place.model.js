@@ -8,6 +8,11 @@ const placeSchema = new mongoose.Schema({
   name: {
     type: String,
   },
+  langs: [
+    {
+      type: String,
+    },
+  ],
   dflt_lang: {
     type: String,
   },

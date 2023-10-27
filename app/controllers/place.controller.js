@@ -1,6 +1,6 @@
 const placeSchema = require("../models/place.model.js");
 const { uploadFile } = require("../helpers/s3.js");
-const createError = require("http-errors");
+const { catchedAsync, response } = require("../helpers");
 
 const updateTheme = async (req, res) => {
   const { theme } = req.body;
@@ -41,74 +41,146 @@ const updateTheme = async (req, res) => {
       "https://app-menu.s3.eu-north-1.amazonaws.com/Theme2/Logo_theme_2.svg";
   }
 
-  await place
-    .save()
-    .then((data) => res.json(data))
-    .catch((err) => next(createError(500, "Error updating place")));
+  await place.save().then((data) => response(res, 200, data));
 };
 
-const getPlaces = async (req, res) => {
-  await placeSchema
-    .find()
-    .then((data) => {
-      res.json(data);
-    })
-    .catch((err) => res.json({ message: err }));
-};
+// const getPlaces = async (req, res) => {
+//   await placeSchema
+//     .find()
+//     .then((data) => response(res, 200, data))
+//     .catch((err) => validateError(err));
+// };
 
-const getPlacesByUser = async (req, res, next) => {
+const getPlacesByUser = async (req, res) => {
   await placeSchema
     .find({ users_id: req.params.id })
-    .then((data) => {
-      res.json(data);
-    })
-    .catch((err) => next(createError(500, "Error getting places")));
+    .then((data) => response(res, 200, data));
 };
 
 const getPlace = async (req, res) => {
   await placeSchema
     .findById(req.params.id)
-    .then((data) => {
-      res.json(data);
-    })
-    .catch((err) => res.json({ message: err }));
+    .then((data) => response(res, 200, data));
 };
 
-const postPlace = async (req, res) => {
-  // if (req.file) {
-  //   const { filename } = req.file;
-  //   place.setImgUrl(filename);
-  // }
-  // console.log(req.files.imgs)
-  // const imgs = req.files.imgs
+const getPlaceAboutUs = async (req, res) => {
+  await placeSchema
+    .findById(req.params.id)
+    .then((data) => response(res, 200, data.about_us));
+};
 
-  // const result = await uploadFile('app-menu', imgs)
+const getPlaceContactUs = async (req, res) => {
+  await placeSchema
+    .findById(req.params.id)
+    .then((data) => response(res, 200, data.contact_us));
+};
 
-  // res.send(result)
+const getPlaceCustoms = async (req, res) => {
+  await placeSchema
+    .findById(req.params.id)
+    .then((data) => response(res, 200, data.customs));
+};
 
-  const place = placeSchema(req.body);
-  await place
-    .save()
-    .then((data) => {
-      res.json(data);
-    })
-    .catch((err) => res.json({ message: err }));
+// const postPlace = async (req, res) => {
+//   // if (req.file) {
+//   //   const { filename } = req.file;
+//   //   place.setImgUrl(filename);
+//   // }
+//   // console.log(req.files.imgs)
+//   // const imgs = req.files.imgs
+
+//   // const result = await uploadFile('app-menu', imgs)
+
+//   // res.send(result)
+
+//   const place = placeSchema(req.body);
+//   await place
+//     .save()
+//     .then((data) => {
+//       res.json(data);
+//     })
+//     .catch((err) => res.json({ message: err }));
+// };
+
+const postPlaceStepHome = async (req, res) => {
+  dataPlace = req.body;
+  const place = placeSchema(dataPlace);
+  await place.save().then((data) => response(res, 200, data));
+};
+
+const postPlaceStepAboutUs = async (req, res) => {
+  const data = req.body;
+
+  const dataModified = { about_us: data };
+
+  const place = await placeSchema.findByIdAndUpdate(
+    req.params.id,
+    dataModified
+  );
+  await place.save().then((data) => response(res, 200, data));
+};
+
+const postPlaceStepContactUs = async (req, res) => {
+  const data = req.body;
+
+  const dataModified = { contact_us: data };
+
+  const place = await placeSchema.findByIdAndUpdate(
+    req.params.id,
+    dataModified
+  );
+  await place.save().then((data) => response(res, 200, data));
+};
+
+const postPlaceStepCustoms = async (req, res) => {
+  const data = req.body;
+
+  const dataModified = { customs: data };
+
+  const place = await placeSchema.findByIdAndUpdate(
+    req.params.id,
+    dataModified
+  );
+  await place.save().then((data) => response(res, 200, data));
+};
+
+const updatePlaceStepHome = async (req, res) => {
+  const data = req.body;
+  const place = await placeSchema.findByIdAndUpdate(req.params.id, data);
+  await place.save().then((data) => response(res, 200, data));
+};
+
+const updatePlaceStepAboutUs = async (req, res) => {
+  const data = { about_us: req.body };
+  const place = await placeSchema.findByIdAndUpdate(req.params.id, data);
+  await place.save().then((data) => response(res, 200, data));
+};
+
+const updatePlaceStepContactUs = async (req, res) => {
+  const data = { contact_us: req.body };
+  const place = await placeSchema.findByIdAndUpdate(req.params.id, data);
+  await place.save().then((data) => response(res, 200, data));
+};
+
+const updatePlaceStepCustoms = async (req, res) => {
+  const data = { customs: req.body };
+  const place = await placeSchema.findByIdAndUpdate(req.params.id, data);
+  await place.save().then((data) => response(res, 200, data));
 };
 
 const deletePlace = async (req, res) => {
   await placeSchema
     .findByIdAndDelete(req.params.id)
-    .then((data) => res.json(data))
-    .catch((err) => res.json({ message: err }));
+    .then((data) => response(res, 200, data));
 };
 
-const updatePlace = async (req, res) => {
-  const place = await placeSchema.findByIdAndUpdate(req.params.id, req.body);
-  await place
-    .save()
-    .then((data) => res.json(data))
-    .catch((err) => res.json({ message: err }));
-};
+// const updatePlace = async (req, res) => {
+//   const place = await placeSchema.findByIdAndUpdate(req.params.id, req.body);
+//   await place
+//     .save()
+//     .then((data) => response(res, 200, data))
+//     .catch((err) => validateError(err));
+// };
 
 const updateDefaultLang = async (req, res) => {
   if (!req.body.dflt_lang)
@@ -118,19 +190,24 @@ const updateDefaultLang = async (req, res) => {
 
   const place = await placeSchema.findById(req.params.id);
   place.dflt_lang = req.body.dflt_lang;
-  await place
-    .save()
-    .then((data) => res.json(data))
-    .catch((err) => res.json({ message: err }));
+  await place.save().then((data) => response(res, 200, data));
 };
 
 module.exports = {
-  updateTheme,
-  getPlaces,
-  getPlacesByUser,
-  getPlace,
-  postPlace,
-  deletePlace,
-  updatePlace,
-  updateDefaultLang,
+  updateTheme: catchedAsync(updateTheme),
+  getPlacesByUser: catchedAsync(getPlacesByUser),
+  getPlace: catchedAsync(getPlace),
+  getPlaceAboutUs: catchedAsync(getPlaceAboutUs),
+  getPlaceContactUs: catchedAsync(getPlaceContactUs),
+  getPlaceCustoms: catchedAsync(getPlaceCustoms),
+  postPlaceStepHome: catchedAsync(postPlaceStepHome),
+  postPlaceStepAboutUs: catchedAsync(postPlaceStepAboutUs),
+  postPlaceStepContactUs: catchedAsync(postPlaceStepContactUs),
+  postPlaceStepCustoms: catchedAsync(postPlaceStepCustoms),
+  updatePlaceStepHome: catchedAsync(updatePlaceStepHome),
+  updatePlaceStepAboutUs: catchedAsync(updatePlaceStepAboutUs),
+  updatePlaceStepContactUs: catchedAsync(updatePlaceStepContactUs),
+  updatePlaceStepCustoms: catchedAsync(updatePlaceStepCustoms),
+  deletePlace: catchedAsync(deletePlace),
+  updateDefaultLang: catchedAsync(updateDefaultLang),
 };

@@ -1,58 +1,57 @@
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const createError = require("http-errors");
 const userSchema = require("../models/user.model.js");
 const accountSchema = require("../models/account.model.js");
 const tokenSchema = require("../models/token.model.js");
-const { jsonResponse } = require("../helpers/jsonresponse.js");
 const { sendEmail } = require("../helpers/sendEmail.js");
+const { catchedAsync, response } = require("../helpers");
+const { validateError } = require("../helpers");
+const { ClientError } = require("../helpers/errors");
 
 const { REFRESH_KEY, SECRET_KEY } = process.env;
 
-const login = async (req, res, next) => {
+const login = async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
-    next(createError(400, "Username or password is required"));
+    throw new ClientError("Username or password is required");
   } else if (username && password) {
-    try {
-      let user = new userSchema({ username, password });
+    let user = new userSchema({ username, password });
 
-      const usernameExist = await user.usernameIsExist(username);
+    const usernameExist = await user.usernameIsExist(username);
 
-      if (usernameExist) {
-        user = await userSchema.findOne({ username: username });
+    if (usernameExist) {
+      user = await userSchema.findOne({ username: username });
 
-        const correctPassword = await user.isCorrectPassword(
-          password,
-          user.password
-        );
+      const correctPassword = await user.isCorrectPassword(
+        password,
+        user.password
+      );
+      if (correctPassword) {
+        const accessToken = user.createAccessToken();
+        const refreshToken = await user.createRefreshToken();
 
-        if (correctPassword) {
-          const accessToken = user.createAccessToken();
-          const refreshToken = await user.createRefreshToken();
-
-          res.json(
-            jsonResponse(200, {
-              message: "Login successfully",
-              accessToken,
-              refreshToken,
-            })
-          );
-        } else {
-          next(createError(400, "Password is incorrect"));
-        }
+        response(res, 200, {
+          message: "Login successfully",
+          accessToken,
+          refreshToken,
+        });
       } else {
-        next(createError(400, "Username is not exist"));
+        validateError(
+          {
+            name: "ClientError",
+          },
+          "Password is incorrect"
+        );
       }
-    } catch (error) {
-      next(createError(500, "Error Login"));
+    } else {
+      throw new ClientError("Username is not exist");
     }
   }
 };
 
-const loginGoogle = async (req, res, next) => {
+const loginGoogle = async (req, res) => {
   const { username } = req.body;
 
   let user = new userSchema({ username });
@@ -64,110 +63,119 @@ const loginGoogle = async (req, res, next) => {
   if (usernameIsExist) {
     const accessToken = user.createAccessToken();
     const refreshToken = await user.createRefreshToken();
-    res.json(
-      jsonResponse(200, {
-        message: "Login successfully",
-        accessToken,
-        refreshToken,
-      })
-    );
+    response(res, 200, {
+      message: "Login successfully",
+      accessToken,
+      refreshToken,
+    });
   } else {
-    next(createError(400, "Email is not registered"));
+    throw new ClientError("Email is not registered");
   }
 };
 
-const logout = async (req, res, next) => {
+const logout = async (req, res) => {
   const { refreshToken } = req.body;
 
-  if (!refreshToken) next(createError(400, "Refresh token is required"));
+  if (!refreshToken) throw new ClientError("Refresh token is required");
 
-  try {
-    await tokenSchema.findOneAndRemove({ token: refreshToken });
-
-    res.json(jsonResponse(200, "Logout successfully"));
-  } catch (err) {
-    next(createError(500, "No token found"));
+  const deleteRefresh = await tokenSchema.findOneAndDelete({
+    token: refreshToken,
+  });
+  if (!deleteRefresh) {
+    throw new ClientError("Refresh token is invalid", 401);
+  } else {
+    response(res, 200, {
+      message: "Logout successfully",
+    });
   }
 };
 
-const refreshToken = async (req, res, next) => {
+const refreshToken = async (req, res) => {
   const { refreshToken } = req.body;
 
-  if (!refreshToken) next(createError(400, "Refresh token is required"));
-  try {
-    const tokenDoc = await tokenSchema.findOne({ token: refreshToken });
-    if (!tokenDoc) {
-      next(createError(401, "Refresh token is not exist"));
-    } else {
-      const payload = jwt.verify(tokenDoc.token, REFRESH_KEY);
-      const accessToken = jwt.sign({ user: payload.user }, SECRET_KEY, {
-        expiresIn: "1h",
-      });
+  if (!refreshToken) throw new ClientError("Refresh token is required", 401);
 
-      res.json(
-        jsonResponse(200, {
+  const tokenDoc = await tokenSchema.findOne({ token: refreshToken });
+  if (!tokenDoc) {
+    throw new ClientError("Refresh token is invalid", 401);
+  } else {
+    jwt.verify(tokenDoc.token, REFRESH_KEY, (err, payload) => {
+      if (err) {
+        if (err.name === "TokenExpiredError") {
+          throw new ClientError("Refresh token is expired", 401);
+        } else {
+          throw new ClientError("Refresh token is invalid", 401);
+        }
+      } else {
+        const accessToken = jwt.sign({ user: payload.user }, SECRET_KEY, {
+          expiresIn: "1h",
+        });
+
+        response(res, 200, {
           message: "Refresh token successfully",
           accessToken,
-        })
-      );
-    }
-  } catch (err) {
-    next(createError(500, "No token found"));
+        });
+      }
+    });
   }
 };
 
-const validateToken = async (req, res, next) => {
+const validateToken = async (req, res) => {
   const { accessToken } = req.body;
 
-  if (!accessToken) next(createError(400, "Access token is required"));
+  if (!accessToken) throw new ClientError("Access token is required", 401);
 
-  try {
-    const payload = jwt.verify(accessToken, SECRET_KEY);
-    if (!payload) next(createError(401, "Token is invalid"));
-    res.json(
-      jsonResponse(200, {
+  jwt.verify(accessToken, SECRET_KEY, (err, payload) => {
+    if (err) {
+      if (err.name === "TokenExpiredError") {
+        throw new ClientError("Access token is expired", 401);
+      } else {
+        throw new ClientError("Access token is invalid", 401);
+      }
+    } else {
+      response(res, 200, {
         message: "Access token is valid",
         payload,
-      })
-    );
-  } catch (err) {
-    next(createError(500, "Access token is invalid"));
-  }
+      });
+    }
+  });
 };
 
-const validateRefreshToken = async (req, res, next) => {
+const validateRefreshToken = async (req, res) => {
   const { refreshToken } = req.body;
 
-  if (!refreshToken) next(createError(400, "Refresh token is required"));
+  if (!refreshToken) throw new ClientError("Refresh token is required", 401);
 
-  try {
-    const payload = jwt.verify(refreshToken, REFRESH_KEY);
-    if (!payload) next(createError(401, "Token is invalid"));
-    res.json(
-      jsonResponse(200, {
+  jwt.verify(refreshToken, REFRESH_KEY, (err, payload) => {
+    if (err) {
+      if (err.name === "TokenExpiredError") {
+        throw new ClientError("Refresh token is expired", 401);
+      } else {
+        throw new ClientError("Refresh token is invalid", 401);
+      }
+    } else {
+      response(res, 200, {
         message: "Refresh token is valid",
         payload,
-      })
-    );
-  } catch (err) {
-    next(createError(500, "Refresh token is invalid"));
-  }
+      });
+    }
+  });
 };
 
-const sendEmailCode = async (req, res, next) => {
-  if (!req.body.email) next(createError(400, "Email is required"));
+const sendEmailCode = async (req, res) => {
+  if (!req.body.email) throw new ClientError("Email is required");
 
   const user = new userSchema(req.body);
   const usernameIsExist = await user.usernameIsExist(req.body.email);
   if (!usernameIsExist) {
-    next(createError(400, "Email is not registered"));
+    throw new ClientError("Email is not registered");
   } else {
     sendEmail(req.body.email, req.body.code)
       .then((result) => {
-        res.json(jsonResponse(200, result.message));
+        response(res, 200, result.message);
       })
       .catch((err) => {
-        next(createError(500, err.message));
+        validateError(err);
       });
   }
 };
@@ -176,55 +184,46 @@ const resetPassword = async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    next(createError(400, "Email or password is required"));
+    throw new ClientError("Email or password is required");
   }
 
   const user = new userSchema({ email });
   const usernameIsExist = await user.usernameIsExist(email);
 
   if (!usernameIsExist) {
-    next(createError(400, "Email is not registered"));
+    throw new ClientError("Email is not registered");
   }
 
   const hashPassword = await bcrypt.hash(password, 10);
   await userSchema
     .findOneAndUpdate({ username: email }, { password: hashPassword })
-    .then((data) => {
-      res.json(jsonResponse(200, "Reset password successfully"));
-    })
-    .catch((err) => {
-      next(createError(500, "Error reset password"));
+    .then(() => {
+      response(res, 200, "Password reset successfully");
     });
 };
 
 const getUser = async (req, res) => {
-  await userSchema
-    .find()
-    .then((data) => {
-      res.json(data);
-    })
-    .catch((err) => next(createError(500, "Error getting users")));
+  await userSchema.find().then((data) => response(res, 200, data));
 };
 
 const getUserById = async (req, res, next) => {
   await userSchema
     .findById(req.params.id)
-    .then((data) => res.json(data))
-    .catch((err) => next(createError(500, "Error getting user")));
+    .then((data) => response(res, 200, data));
 };
 
 const postUser = async (req, res, next) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
-    next(createError(400, "Username or password is required"));
+    throw new ClientError("Username or password is required");
   } else if (username && password) {
     const user = new userSchema(req.body);
 
     const usernameExist = await user.usernameIsExist(username);
 
     if (usernameExist) {
-      next(createError(400, "Username is already exist"));
+      throw new ClientError("Username is already exist");
     } else {
       const accessToken = user.createAccessToken();
       const refreshToken = await user.createRefreshToken();
@@ -232,15 +231,13 @@ const postUser = async (req, res, next) => {
       await user
         .save()
         .then((data) => {
-          res.json(
-            jsonResponse(200, {
-              message: "User created successfully",
-              accessToken,
-              refreshToken,
-            })
-          );
+          response(res, 200, {
+            message: "Register successfully",
+            accessToken,
+            refreshToken,
+          });
         })
-        .catch((err) => res.json(jsonResponse(500, "Error Saving User")));
+        .catch((err) => validateError(err));
       await accountSchema
         .findById(req.body.account_id)
         .then((data) => {
@@ -248,39 +245,37 @@ const postUser = async (req, res, next) => {
           data.save();
         })
         .catch((err) =>
-          res.json(jsonResponse(500, "Error Saving User to Account"))
+          validateError(err, "Error saving user to account collection")
         );
     }
   }
 };
 
-const deleteUser = async (req, res) => {
-  await userSchema
-    .findByIdAndDelete(req.params.id)
-    .then((data) => res.json(data))
-    .catch((err) => res.json({ message: err }));
-};
+// const deleteUser = async (req, res) => {
+//   await userSchema
+//     .findByIdAndDelete(req.params.id)
+//     .then((data) => res.json(data))
+//     .catch((err) => res.json({ message: err }));
+// };
 
-const updateUser = async (req, res) => {
-  const user = await userSchema.findByIdAndUpdate(req.params.id, req.body);
-  await user
-    .save()
-    .then((data) => res.json(data))
-    .catch((err) => next(createError(500, "Error updating user")));
-};
+// const updateUser = async (req, res) => {
+//   const user = await userSchema.findByIdAndUpdate(req.params.id, req.body);
+//   await user
+//     .save()
+//     .then((data) => res.json(data))
+//     .catch((err) => next(createError(500, "Error updating user")));
+// };
 
 module.exports = {
-  login,
-  loginGoogle,
-  logout,
-  refreshToken,
-  validateToken,
-  validateRefreshToken,
-  sendEmailCode,
-  resetPassword,
-  getUser,
-  getUserById,
-  postUser,
-  deleteUser,
-  updateUser,
+  login: catchedAsync(login),
+  loginGoogle: catchedAsync(loginGoogle),
+  logout: catchedAsync(logout),
+  refreshToken: catchedAsync(refreshToken),
+  validateToken: catchedAsync(validateToken),
+  validateRefreshToken: catchedAsync(validateRefreshToken),
+  sendEmailCode: catchedAsync(sendEmailCode),
+  resetPassword: catchedAsync(resetPassword),
+  getUser: catchedAsync(getUser),
+  getUserById: catchedAsync(getUserById),
+  postUser: catchedAsync(postUser),
 };

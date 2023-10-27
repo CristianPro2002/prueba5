@@ -1,29 +1,27 @@
 const accountSchema = require("../models/account.model.js");
 const userSchema = require("../models/user.model.js");
-const createError = require("http-errors");
+const { catchedAsync, response } = require("../helpers");
+const { validateError } = require("../helpers");
+const { ClientError } = require("../helpers/errors");
 
-const getAccount = async (req, res) => {
-  await accountSchema
-    .find()
-    .then((data) => {
-      res.json(data);
-    })
-    .catch((err) => res.json({ message: err }));
+const getAccounts = async (req, res) => {
+  await accountSchema.find().then((data) => response(res, 200, data));
 };
 
 const getAccountById = async (req, res) => {
-  await accountSchema
-    .findById(req.params.id)
-    .then((data) => res.json(data))
-    .catch((err) => res.json({ message: err }));
+  await accountSchema.findById(req.params.id).then((data) => {
+    if (!data) throw new ClientError("Account not found");
+    response(res, 200, data);
+  });
 };
 
-const postAccount = async (req, res, next) => {
+const postAccount = async (req, res) => {
+  const emailModified = req.body.email.toLowerCase();
   const bodyUser = {
     first_name: req.body.name,
-    email: req.body.email,
+    email: emailModified,
     phone: req.body.phone,
-    username: req.body.email,
+    username: emailModified,
     password: req.body.password,
     profile: "superadmin",
     account_id: {},
@@ -33,7 +31,7 @@ const postAccount = async (req, res, next) => {
     vat_id: req.body.vat_id,
     billing_info: {
       name: req.body.name,
-      email: req.body.email,
+      email: emailModified,
       country: req.body.country,
       state: req.body.state,
       city: req.body.city,
@@ -46,10 +44,9 @@ const postAccount = async (req, res, next) => {
 
   const account = accountSchema(body);
 
-  console.log(req.body.email);
   const emailIsExist = await account.emailIsExist(req.body.email);
   if (emailIsExist) {
-    next(createError(400, "Email already exist"));
+    throw new ClientError("Email already exist");
   } else {
     await account
       .save()
@@ -62,22 +59,19 @@ const postAccount = async (req, res, next) => {
             account.users.push(data._id);
             account
               .save()
-              .then((data) => {
-                res.json(data);
-              })
-              .catch((err) => res.json({ message: err }));
+              .then((data) => response(res, 200, data))
+              .catch((err) => validateError(err, "Error saving account"));
           })
-          .catch((err) => res.json({ message: err }));
+          .catch((err) => validateError(err, "Error saving user"));
       })
-      .catch((err) => res.json({ message: err }));
+      .catch((err) => validateError(err));
   }
 };
 
 const deleteAccount = async (req, res) => {
   await accountSchema
     .findByIdAndDelete(req.params.id)
-    .then((data) => res.json(data))
-    .catch((err) => res.json({ message: err }));
+    .then((data) => response(res, 200, data));
 };
 
 const updateAccount = async (req, res) => {
@@ -85,16 +79,13 @@ const updateAccount = async (req, res) => {
     req.params.id,
     req.body
   );
-  await account
-    .save()
-    .then((data) => res.json(data))
-    .catch((err) => res.json({ message: err }));
+  await account.save().then((data) => response(res, 200, data));
 };
 
 module.exports = {
-  getAccount,
-  getAccountById,
-  postAccount,
-  deleteAccount,
-  updateAccount,
+  getAccounts: catchedAsync(getAccounts),
+  getAccountById: catchedAsync(getAccountById),
+  postAccount: catchedAsync(postAccount),
+  deleteAccount: catchedAsync(deleteAccount),
+  updateAccount: catchedAsync(updateAccount),
 };

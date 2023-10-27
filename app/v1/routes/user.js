@@ -1,45 +1,27 @@
 const express = require("express");
-const {
-    login,
-    loginGoogle,
-    logout,
-    refreshToken,
-    validateToken,
-    validateRefreshToken,
-    sendEmailCode,
-    resetPassword,
-    getUser,
-    getUserById,
-    postUser,
-    deleteUser,
-    updateUser,
-} = require("../../controllers/user.controller.js");
+const { userController } = require("../../controllers");
 const router = express.Router();
 
-router.post("/login", login);
+router.post("/login", userController.login);
 
-router.post("/login-google", loginGoogle);
+router.post("/login-google", userController.loginGoogle);
 
-router.post("/logout", logout);
+router.post("/logout", userController.logout);
 
-router.post("/refresh-token", refreshToken);
+router.post("/refresh-token", userController.refreshToken);
 
-router.post("/validate-token", validateToken);
+router.post("/validate-token", userController.validateToken);
 
-router.post("/validate-refresh-token", validateRefreshToken)
+router.post("/validate-refresh-token", userController.validateRefreshToken);
 
-router.post("/send-email", sendEmailCode);
+router.post("/send-email", userController.sendEmailCode);
 
-router.post("/reset-password", resetPassword);
+router.post("/reset-password", userController.resetPassword);
 
-router.get("/", getUser);
+router.get("/", userController.getUser);
 
-router.get("/:id", getUserById);
+router.get("/:id", userController.getUserById);
 
-router.post("/", postUser);
-
-router.delete("/:id", deleteUser);
-
-router.put("/:id", updateUser);
+router.post("/", userController.postUser);
 
 module.exports = router;

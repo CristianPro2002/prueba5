@@ -45,15 +45,21 @@ userSchema.pre("save", function (next) {
 });
 
 userSchema.methods.usernameIsExist = async function (username) {
-    try {
-        const user = await mongoose.model("User").findOne({ username: username });
-        return user ? true : false;
-    } catch (err) {
-        return false;
-    }
+  try {
+    const usernameModified = username.toLowerCase();
+    const user = await mongoose
+      .model("User")
+      .findOne({ username: usernameModified });
+    return user ? true : false;
+  } catch (err) {
+    return false;
+  }
 };
 
-userSchema.methods.isCorrectPassword = async function (password,hashedPassword) {
+userSchema.methods.isCorrectPassword = async function (
+  password,
+  hashedPassword
+) {
   try {
     return await bcrypt.compare(password, hashedPassword);
   } catch (err) {

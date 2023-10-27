@@ -16,7 +16,11 @@ const productSchema = new mongoose.Schema({
   },
   alergens: [{
     type: mongoose.Schema.Types.ObjectId,
-  }]
+  }],
+  account: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Account",
+  },
 });
 
 productSchema.methods.setImgUrl = function setImgUrl(filename){

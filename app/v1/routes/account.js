@@ -1,21 +1,16 @@
 const express = require("express");
-const {
-  getAccount,
-  getAccountById,
-  postAccount,
-  deleteAccount,
-  updateAccount,
-} = require("../../controllers/account.controller.js");
+const { accountController } = require("../../controllers");
+const { validateToken } = require("../../middleware/authenticationToken.js");
 const router = express.Router();
 
-router.get("/", getAccount);
+router.get("/", validateToken, accountController.getAccounts);
 
-router.get("/:id", getAccountById);
+router.get("/:id", validateToken, accountController.getAccountById);
 
-router.post("/", postAccount);
+router.post("/", accountController.postAccount);
 
-router.delete("/:id", deleteAccount);
+router.delete("/:id", validateToken, accountController.deleteAccount);
 
-router.put("/:id", updateAccount);
+router.put("/:id", validateToken, accountController.updateAccount);
 
 module.exports = router;

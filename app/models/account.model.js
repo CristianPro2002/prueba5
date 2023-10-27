@@ -37,16 +37,19 @@ const accountSchema = new mongoose.Schema({
   users: [
     {
       type: mongoose.Schema.Types.ObjectId,
-    }
-  ]
+    },
+  ],
 });
 
 accountSchema.methods.emailIsExist = async function (email) {
   try {
-      const userEmail = await mongoose.model("account").findOne({ "billing_info.email": email });
-      return userEmail ? true : false;
+    const emailModified = email.toLowerCase();
+    const userEmail = await mongoose
+      .model("account")
+      .findOne({ "billing_info.email": emailModified });
+    return userEmail ? true : false;
   } catch (err) {
-      return false;
+    return false;
   }
 };
 

@@ -1,24 +1,9 @@
 const express = require("express");
-const {
-  getMenus,
-  getMenuById,
-  getMenusByPlaces,
-  postMenu,
-  deleteMenu,
-  updateMenu,
-} = require("../../controllers/menu.controller.js");
+const { menuController } = require("../../controllers");
 const router = express.Router();
 
-router.get("/", getMenus);
+router.get("/:id", menuController.getMenuById);
 
-router.get("/:id", getMenuById);
-
-router.get("/places", getMenusByPlaces);
-
-router.post("/", postMenu);
-
-router.delete("/:id", deleteMenu);
-
-router.put("/:id", updateMenu);
+router.get("/places", menuController.getMenusByPlaces);
 
 module.exports = router;
