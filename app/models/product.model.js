@@ -17,9 +17,9 @@ const productSchema = new mongoose.Schema({
   alergens: [{
     type: mongoose.Schema.Types.ObjectId,
   }],
-  account: {
+  place_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Account",
+    ref: "Place",
   },
 });
 

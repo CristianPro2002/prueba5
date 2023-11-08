@@ -6,6 +6,6 @@ const upload = require("../../middleware/uploadImg.js");
 
 router.get("/category/:id", productController.getProductsByCategory);
 
-router.get("/account/:id", validateToken, productController.getProductsByAccount);
+router.post("/places", validateToken, productController.getProductsByPlaces);
 
 module.exports = router;

@@ -16,9 +16,11 @@ const getProductsByCategory = async (req, res) => {
     .then((data) => response(res, 200, data));
 };
 
-const getProductsByAccount = async (req, res) => {
+const getProductsByPlaces = async (req, res) => {
+  const ids = req.body.places;
+
   await productSchema
-    .find({ account: req.params.id })
+    .find({ place_id: { $in: ids } })
     .then((data) => response(res, 200, data));
 };
 
@@ -57,5 +59,5 @@ const getProductsByAccount = async (req, res) => {
 
 module.exports = {
   getProductsByCategory: catchedAsync(getProductsByCategory),
-  getProductsByAccount: catchedAsync(getProductsByAccount),
+  getProductsByPlaces: catchedAsync(getProductsByPlaces),
 };
